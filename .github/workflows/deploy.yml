@@ -31,6 +31,7 @@ jobs:
         run: |
           npm install
           npm run build
+
       - name: Copy build files to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -40,7 +41,7 @@ jobs:
           source: ".,!.git"
           target: "${{ secrets.APP_DIR }}"
 
-      - name: Restart app with PM2
+      - name: Create .env on server & restart app
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -48,7 +49,21 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ${{ secrets.APP_DIR }}
-            sudo npm install
-            sudo pm2 delete medusa-storefront || true
-            sudo pm2 start npm --name "medusa-storefront" -- run start
+
+            # Create .env file
+            echo "MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}" > .env
+            echo "NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}" >> .env
+            echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> .env
+            echo "NEXT_PUBLIC_DEFAULT_REGION=${NEXT_PUBLIC_DEFAULT_REGION}" >> .env
+            echo "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}" >> .env
+            echo "NEXT_PUBLIC_STRIPE_KEY=${NEXT_PUBLIC_STRIPE_KEY}" >> .env
+            echo "REVALIDATE_SECRET=${REVALIDATE_SECRET}" >> .env
+
+            # Install production dependencies
+            sudo npm install --production
+
+            # Restart PM2 process
+            sudo pm2 delete storefront || true
+            sudo pm2 start npm --name "storefront" -- run start
             sudo pm2 save
+
