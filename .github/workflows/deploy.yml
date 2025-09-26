@@ -51,19 +51,21 @@ jobs:
             cd ${{ secrets.APP_DIR }}
 
             # Create .env file
-            echo "MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}" > .env
-            echo "NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}" >> .env
-            echo "NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}" >> .env
-            echo "NEXT_PUBLIC_DEFAULT_REGION=${NEXT_PUBLIC_DEFAULT_REGION}" >> .env
-            echo "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}" >> .env
-            echo "NEXT_PUBLIC_STRIPE_KEY=${NEXT_PUBLIC_STRIPE_KEY}" >> .env
-            echo "REVALIDATE_SECRET=${REVALIDATE_SECRET}" >> .env
+            sudo bash -c 'cat > .env <<EOL
+MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
+NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}
+NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+NEXT_PUBLIC_DEFAULT_REGION=${NEXT_PUBLIC_DEFAULT_REGION}
+NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}
+NEXT_PUBLIC_STRIPE_KEY=${NEXT_PUBLIC_STRIPE_KEY}
+REVALIDATE_SECRET=${REVALIDATE_SECRET}
+EOL'
 
             # Install production dependencies
             sudo npm install --production
 
             # Restart PM2 process
-            sudo pm2 delete storefront || true
-            sudo pm2 start npm --name "storefront" -- run start
+            sudo pm2 delete medusa-storefront || true
+            sudo pm2 start npm --name "medusa-storefront" -- run start
             sudo pm2 save
 
