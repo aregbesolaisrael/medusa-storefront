@@ -27,12 +27,24 @@ jobs:
         with:
           node-version: 20
 
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          MEDUSA_BACKEND_URL=${{ vars.MEDUSA_BACKEND_URL }}
+          NEXT_PUBLIC_MEDUSA_BACKEND_URL=${{ vars.NEXT_PUBLIC_MEDUSA_BACKEND_URL }}
+          NEXT_PUBLIC_BASE_URL=${{ vars.NEXT_PUBLIC_BASE_URL }}
+          NEXT_PUBLIC_DEFAULT_REGION=${{ vars.NEXT_PUBLIC_DEFAULT_REGION }}
+          NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_STRIPE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_KEY }}
+          REVALIDATE_SECRET=${{ secrets.REVALIDATE_SECRET }}
+          EOF
+
       - name: Install dependencies and build
         run: |
           npm install
           npm run build
 
-      - name: Copy build files to server
+      - name: Copy build files and .env to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -41,7 +53,7 @@ jobs:
           source: ".,!.git"
           target: "${{ secrets.APP_DIR }}"
 
-      - name: Create .env on server & restart app
+      - name: Restart app
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -50,22 +62,10 @@ jobs:
           script: |
             cd ${{ secrets.APP_DIR }}
 
-            # Create .env file
-            sudo bash -c 'cat > .env <<EOL
-MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
-NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}
-NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
-NEXT_PUBLIC_DEFAULT_REGION=${NEXT_PUBLIC_DEFAULT_REGION}
-NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}
-NEXT_PUBLIC_STRIPE_KEY=${NEXT_PUBLIC_STRIPE_KEY}
-REVALIDATE_SECRET=${REVALIDATE_SECRET}
-EOL'
-
             # Install production dependencies
-            sudo npm install --production
+            sudo npm install
 
             # Restart PM2 process
             sudo pm2 delete medusa-storefront || true
-            sudo pm2 start npm --name "medusa-storefront" -- run start
+            sudo pm2 start npm --name medusa-"storefront" -- run start
             sudo pm2 save
-
